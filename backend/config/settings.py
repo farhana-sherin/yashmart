@@ -42,8 +42,9 @@ INSTALLED_APPS = [
     'apps.customers',
     'apps.dashboard',
     'apps.offers',
-    'apps.rewards'
-
+    'apps.rewards',
+    'apps.settings_app',
+    'apps.notifications'
 ]
 
 MIDDLEWARE = [
