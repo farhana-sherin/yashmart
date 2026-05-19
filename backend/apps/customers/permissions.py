@@ -5,7 +5,9 @@ class IsAdminUser(permissions.BasePermission):
     Allows access only to admin users.
     """
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and request.user.role == 'ADMIN')
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return getattr(request.user, 'role', None) in ['ADMIN', 'STAFF']
 
 class IsCustomerOwner(permissions.BasePermission):
     """
@@ -13,8 +15,11 @@ class IsCustomerOwner(permissions.BasePermission):
     Assumes the model instance has an `user` attribute.
     """
     def has_object_permission(self, request, view, obj):
-        # Admin can view all
-        if request.user.role == 'ADMIN':
+        if not request.user or not request.user.is_authenticated:
+            return False
+            
+        # Admin and Staff can view all
+        if getattr(request.user, 'role', None) in ['ADMIN', 'STAFF']:
             return True
             
         # Customer can only view their own data

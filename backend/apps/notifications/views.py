@@ -22,9 +22,23 @@ class MarkNotificationReadView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(responses={200: NotificationSerializer()})
-    def put(self, request, pk, *args, **kwargs):
+    def post(self, request, pk, *args, **kwargs):
         notification = NotificationService.mark_notification_read(pk, request.user)
         if notification:
             serializer = NotificationSerializer(notification)
             return success_response(data=serializer.data, message="Notification marked as read.")
         return error_response(message="Notification not found.", status_code=status.HTTP_404_NOT_FOUND)
+
+class MarkAllNotificationsReadView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return success_response(message="All notifications marked as read.")
+
+class UnreadNotificationCountView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        count = Notification.objects.filter(user=request.user, is_read=False).count()
+        return success_response(data={'unread_count': count}, message="Unread count retrieved.")

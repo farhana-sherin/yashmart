@@ -1,21 +1,30 @@
 # pyrefly: ignore [missing-import]
 from geopy.distance import geodesic
 from rest_framework import serializers
-from .constants import OFFICE_LOCATION, MAX_DISTANCE
 
 
 def validate_gps_coordinates(latitude, longitude):
     """
     Validates if the given coordinates are within the allowed radius of the office.
+    Uses dynamic settings from SystemSettings.
     """
+    from apps.settings_app.models import SystemSettings
+    settings = SystemSettings.load()
+    
+    office_location = (float(settings.office_latitude), float(settings.office_longitude))
+    max_distance = float(settings.attendance_radius)
+    
     try:
         user_location = (float(latitude), float(longitude))
-        distance = geodesic(OFFICE_LOCATION, user_location).meters
+        distance = float(geodesic(office_location, user_location).meters)
         
-        if distance > MAX_DISTANCE:
+        print(f"DEBUG: GPS Check - Distance: {distance}m, Max: {max_distance}m")
+        
+        if distance > max_distance:
             return False, distance
         return True, distance
-    except (TypeError, ValueError):
+    except (TypeError, ValueError) as e:
+        print(f"DEBUG: GPS Validation Exception: {str(e)}")
         return False, 0
 
 

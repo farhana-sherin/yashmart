@@ -1,3 +1,4 @@
+from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -27,40 +28,29 @@ def register(request):
     )
 
     if not serializer.is_valid():
-
         return Response({
-            "status": 6001,
-            "message": serializer.errors
-        })
+            "success": False,
+            "message": "Validation failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-    data = serializer.validated_data
-
-    user = User.objects.create_user(
-        email=data['email'],
-        password=data['password']
-    )
+    user = serializer.save()
 
     refresh = RefreshToken.for_user(user)
 
     return Response({
-
-        "status": 6000,
-
+        "success": True,
         "message": "Register successful",
-
         "data": {
-
             "refresh": str(refresh),
-
             "access": str(refresh.access_token),
-
             "user": {
                 "email": user.email,
                 "role": user.role,
                 "is_profile_completed": user.is_profile_completed
             }
         }
-    })
+    }, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -71,28 +61,22 @@ def login(request):
     )
 
     if not serializer.is_valid():
-
         return Response({
-            "status": 6001,
-            "message": serializer.errors
-        })
+            "success": False,
+            "message": "Login failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     user = serializer.validated_data['user']
 
     refresh = RefreshToken.for_user(user)
 
     return Response({
-
-        "status": 6000,
-
+        "success": True,
         "message": "Login successful",
-
         "data": {
-
             "refresh": str(refresh),
-
             "access": str(refresh.access_token),
-
             "user": {
                 "id": user.id,
                 "email": user.email,
@@ -103,20 +87,42 @@ def login(request):
         }
     })
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
 def profile(request):
+    if request.method == 'GET':
+        serializer = ProfileSerializer(request.user)
+        return Response({
+            "success": True,
+            "data": serializer.data
+        })
+    elif request.method == 'PUT':
+        serializer = ProfileSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
 
-    serializer = ProfileSerializer(
-        request.user
-    )
+        if not serializer.is_valid():
+            return Response({
+                "success": False,
+                "message": "Validation failed",
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({
+        # Ensure name is updated if first_name/last_name change
+        first_name = serializer.validated_data.get('first_name', request.user.first_name)
+        last_name = serializer.validated_data.get('last_name', request.user.last_name)
+        if first_name or last_name:
+            serializer.validated_data['name'] = f"{first_name or ''} {last_name or ''}".strip()
 
-        "status": 6000,
+        serializer.save()
 
-        "data": serializer.data
-    })
+        return Response({
+            "success": True,
+            "message": "Profile updated successfully",
+            "data": serializer.data
+        })
 
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
@@ -129,24 +135,20 @@ def complete_profile(request):
     )
 
     if not serializer.is_valid():
-
         return Response({
-            "status": 6001,
-            "message": serializer.errors
-        })
+            "success": False,
+            "message": "Validation failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     serializer.save()
 
     request.user.is_profile_completed = True
-
     request.user.save()
 
     return Response({
-
-        "status": 6000,
-
+        "success": True,
         "message": "Profile completed",
-
         "data": ProfileSerializer(
             request.user
         ).data
@@ -161,35 +163,29 @@ def change_password(request):
     )
 
     if not serializer.is_valid():
-
         return Response({
-            "status": 6001,
-            "message": serializer.errors
-        })
+            "success": False,
+            "message": "Validation failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     user = request.user
 
     if not user.check_password(
         serializer.validated_data['old_password']
     ):
-
         return Response({
-
-            "status": 6001,
-
+            "success": False,
             "message": "Old password incorrect"
-        })
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     user.set_password(
         serializer.validated_data['new_password']
     )
-
     user.save()
 
     return Response({
-
-        "status": 6000,
-
+        "success": True,
         "message": "Password changed successfully"
     })
 
@@ -198,28 +194,26 @@ def change_password(request):
 def logout(request):
 
     try:
-
-        refresh_token = request.data["refresh"]
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response({
+                "success": False,
+                "message": "Refresh token is required"
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         token = RefreshToken(refresh_token)
-
         token.blacklist()
 
         return Response({
-
-            "status": 6000,
-
+            "success": True,
             "message": "Logout successful"
         })
 
     except Exception:
-
         return Response({
-
-            "status": 6001,
-
+            "success": False,
             "message": "Invalid token"
-        })
+        }, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -230,11 +224,11 @@ def google_login(request):
     )
 
     if not serializer.is_valid():
-
         return Response({
-            "status": 6001,
-            "message": serializer.errors
-        })
+            "success": False,
+            "message": "Validation failed",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     token = serializer.validated_data['id_token']
 
@@ -267,17 +261,11 @@ def google_login(request):
         refresh = RefreshToken.for_user(user)
 
         return Response({
-
-            "status": 6000,
-
+            "success": True,
             "message": "Google Login successful",
-
             "data": {
-
                 "refresh": str(refresh),
-
                 "access": str(refresh.access_token),
-
                 "user": {
                     "id": user.id,
                     "email": user.email,
@@ -290,6 +278,6 @@ def google_login(request):
 
     except ValueError:
         return Response({
-            "status": 6001,
+            "success": False,
             "message": "Invalid Google token"
-        })
+        }, status=status.HTTP_400_BAD_REQUEST)

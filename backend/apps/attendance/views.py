@@ -1,4 +1,5 @@
 from rest_framework import status, views, generics, permissions, filters
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -39,6 +40,7 @@ class CheckInView(views.APIView, StandardResponseMixin):
         responses={201: AttendanceSerializer, 400: 'Bad Request'}
     )
     def post(self, request):
+        print(f"DEBUG: Check-In Request Data: {request.data}")
         serializer = CheckInSerializer(data=request.data)
         if serializer.is_valid():
             try:
@@ -54,9 +56,17 @@ class CheckInView(views.APIView, StandardResponseMixin):
                     message="Checked in successfully",
                     status_code=status.HTTP_201_CREATED
                 )
+            except ValidationError as e:
+                return self.error_response(
+                    message=e.detail.get('message', [str(e)])[0] if isinstance(e.detail, dict) else str(e),
+                    errors=e.detail if isinstance(e.detail, dict) else {'error': str(e)}
+                )
             except Exception as e:
+                print(f"DEBUG: Check-In Service Error: {str(e)}")
                 return self.error_response(message=str(e))
-        return self.error_response(message="Invalid data", errors=serializer.errors)
+        
+        print(f"DEBUG: Check-In Serializer Errors: {serializer.errors}")
+        return self.error_response(message="Invalid location data", errors=serializer.errors)
 
 
 class CheckOutView(views.APIView, StandardResponseMixin):
@@ -78,6 +88,11 @@ class CheckOutView(views.APIView, StandardResponseMixin):
                 return self.success_response(
                     AttendanceSerializer(attendance).data,
                     message="Checked out successfully"
+                )
+            except ValidationError as e:
+                return self.error_response(
+                    message=e.detail.get('message', [str(e)])[0] if isinstance(e.detail, dict) else str(e),
+                    errors=e.detail if isinstance(e.detail, dict) else {'error': str(e)}
                 )
             except Exception as e:
                 return self.error_response(message=str(e))
@@ -109,14 +124,14 @@ class TodayAttendanceView(views.APIView, StandardResponseMixin):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        try:
-            attendance = Attendance.objects.get(
-                staff=request.user, 
-                date=timezone.now().date()
-            )
+        attendance = Attendance.objects.filter(
+            staff=request.user, 
+            date=timezone.now().date()
+        ).first()
+        
+        if attendance:
             return self.success_response(AttendanceSerializer(attendance).data)
-        except Attendance.DoesNotExist:
-            return self.success_response(data=None, message="No attendance record for today")
+        return self.success_response(data=None, message="No attendance record for today")
 
 
 class AttendanceStatisticsView(views.APIView, StandardResponseMixin):

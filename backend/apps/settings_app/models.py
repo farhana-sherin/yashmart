@@ -11,7 +11,11 @@ class SystemSettings(TimeStampedModel):
     company_address = models.TextField(default="Main Street, City")
     
     point_conversion_rate = models.DecimalField(max_digits=10, decimal_places=2, default=10.00, help_text="Amount required for 1 point")
-    attendance_radius = models.IntegerField(default=50, help_text="Allowed radius in meters for attendance")
+    
+    # Attendance Settings
+    attendance_radius = models.IntegerField(default=100, help_text="Allowed radius in meters for attendance")
+    office_latitude = models.DecimalField(max_digits=9, decimal_places=6, default=10.850383, help_text="Office Latitude")
+    office_longitude = models.DecimalField(max_digits=9, decimal_places=6, default=76.037491, help_text="Office Longitude")
     qr_expiry_minutes = models.IntegerField(default=5, help_text="QR code expiry duration in minutes")
     
     reward_enabled = models.BooleanField(default=True)

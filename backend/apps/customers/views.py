@@ -1,4 +1,5 @@
 from rest_framework import viewsets, filters, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_yasg.utils import swagger_auto_schema
@@ -10,9 +11,13 @@ from .serializers import (
 from .filters import CustomerFilter
 from .permissions import IsAdminUser, IsCustomerOwner
 from apps.common.pagination import StandardResultsSetPagination
-
 class CustomerViewSet(viewsets.ModelViewSet):
-    queryset = Customer.objects.select_related('user').all()
+    def get_queryset(self):
+        """
+        Return only users with CUSTOMER role.
+        """
+        return Customer.objects.filter(user__role='CUSTOMER').select_related('user')
+
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = CustomerFilter
@@ -42,13 +47,32 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        customer = serializer.save()
-        return Response({
-            'success': True,
-            'message': 'Customer created successfully',
-            'data': CustomerDetailSerializer(customer).data
-        }, status=status.HTTP_201_CREATED)
+        if not serializer.is_valid():
+            print(f"DEBUG: Customer creation validation failed: {serializer.errors}")
+            return Response({
+                'success': False,
+                'message': 'Validation failed',
+                'errors': serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            customer = serializer.save()
+            return Response({
+                'success': True,
+                'message': 'Customer created successfully',
+                'data': CustomerDetailSerializer(customer).data
+            }, status=status.HTTP_201_CREATED)
+        except ValidationError as e:
+            return Response({
+                'success': False,
+                'message': str(e.detail) if hasattr(e, 'detail') else str(e),
+                'errors': e.detail if hasattr(e, 'detail') else None
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()

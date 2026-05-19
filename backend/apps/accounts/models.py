@@ -19,10 +19,10 @@ class User(AbstractUser):
     )
 
     username = None
-    first_name = None
-    last_name = None
 
-    name = models.CharField(max_length=150,blank=True,null=True)
+    first_name = models.CharField(max_length=150, blank=True, null=True)
+    last_name = models.CharField(max_length=150, blank=True, null=True)
+    name = models.CharField(max_length=150, blank=True, null=True)
 
     email = models.EmailField(unique=True)
 

@@ -9,12 +9,14 @@ class UserBriefSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     user = UserBriefSerializer(read_only=True)
+    full_name = serializers.CharField(source='user.name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
     
     class Meta:
         model = Customer
         fields = [
-            'id', 'user', 'phone', 'address', 'total_points', 
-            'pending_balance', 'joined_at', 'loyalty_id', 
+            'id', 'user', 'full_name', 'email', 'phone', 'address', 
+            'total_points', 'pending_balance', 'joined_at', 'loyalty_id', 
             'notes', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -23,28 +25,60 @@ class CustomerSerializer(serializers.ModelSerializer):
         ]
 
 class CustomerCreateSerializer(serializers.ModelSerializer):
-    user_id = serializers.UUIDField(write_only=True)
+    full_name = serializers.CharField(write_only=True)
+    email = serializers.EmailField(write_only=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+    address = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
     
     class Meta:
         model = Customer
-        fields = ['user_id', 'phone', 'address', 'notes']
+        fields = ['full_name', 'email', 'phone', 'address', 'notes']
 
-    def validate_user_id(self, value):
-        if not User.objects.filter(id=value).exists():
-            raise serializers.ValidationError("User does not exist.")
-        if Customer.objects.filter(user_id=value).exists():
-            raise serializers.ValidationError("Customer profile already exists for this user.")
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
         return value
         
     def create(self, validated_data):
-        user_id = validated_data.pop('user_id')
-        user = User.objects.get(id=user_id)
-        return Customer.objects.create(user=user, **validated_data)
+        full_name = validated_data.pop('full_name')
+        email = validated_data.pop('email')
+        phone = validated_data.get('phone')
+        
+        # 1. Create User
+        user = User.objects.create_user(
+            email=email,
+            password='Customer@123', # Default password
+            name=full_name,
+            phone=phone,
+            role='CUSTOMER',
+            is_active=True,
+            is_verified=True
+        )
+        
+        # 2. Update or Create Customer Profile
+        # Note: A signal might have already created a profile during User.objects.create_user
+        customer, created = Customer.objects.update_or_create(
+            user=user,
+            defaults=validated_data
+        )
+        return customer
 
 class CustomerUpdateSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(write_only=True, required=False)
+    
     class Meta:
         model = Customer
-        fields = ['phone', 'address', 'notes', 'is_active']
+        fields = ['full_name', 'phone', 'address', 'notes', 'is_active']
+
+    def update(self, instance, validated_data):
+        full_name = validated_data.pop('full_name', None)
+        if full_name:
+            user = instance.user
+            user.name = full_name
+            user.save(update_fields=['name'])
+            
+        return super().update(instance, validated_data)
 
 class CustomerDetailSerializer(CustomerSerializer):
     recent_transactions = serializers.SerializerMethodField()

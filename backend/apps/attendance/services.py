@@ -19,14 +19,24 @@ class AttendanceService:
     @staticmethod
     @transaction.atomic
     def perform_checkin(user, latitude, longitude, request, qr_token=None):
+        print(f"DEBUG: Processing check-in for user {user.email}")
         # 1. Check if already checked in
         if AttendanceService.already_checked_in(user):
+            print(f"DEBUG: User {user.email} already checked in today")
             raise ValidationError("You have already checked in for today.")
 
         # 2. Validate GPS
+        print(f"DEBUG: Validating coordinates: {latitude}, {longitude}")
         is_valid_gps, distance = validate_gps_coordinates(latitude, longitude)
+        from apps.settings_app.models import SystemSettings
+        max_radius = SystemSettings.load().attendance_radius
+        
         if not is_valid_gps:
-            raise ValidationError(f"You are too far from the office ({round(distance, 2)}m).")
+            raise ValidationError({
+                "message": f"You are too far from the office. Current distance: {round(distance, 2)}m, Allowed: {max_radius}m",
+                "distance": round(distance, 2),
+                "allowed_radius": max_radius
+            })
 
         # 3. Detect Late
         late_minutes = AttendanceService.detect_late_attendance()
@@ -63,11 +73,19 @@ class AttendanceService:
 
         # 2. Validate GPS
         is_valid_gps, distance = validate_gps_coordinates(latitude, longitude)
+        from apps.settings_app.models import SystemSettings
+        max_radius = SystemSettings.load().attendance_radius
+        
         if not is_valid_gps:
-            raise ValidationError(f"You are too far from the office ({round(distance, 2)}m).")
+            raise ValidationError({
+                "message": f"You are too far from the office. Current distance: {round(distance, 2)}m, Allowed: {max_radius}m",
+                "distance": round(distance, 2),
+                "allowed_radius": max_radius
+            })
 
         # 3. Update Record
         attendance.check_out = timezone.now()
+        attendance.is_active = False
         attendance.save()
         return attendance
 
