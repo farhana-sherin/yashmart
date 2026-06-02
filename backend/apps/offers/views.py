@@ -22,6 +22,14 @@ class OfferViewSet(viewsets.ModelViewSet):
     ordering = ['-priority', '-start_date']
     permission_classes = [IsOfferManager]
 
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated and user.role == 'CUSTOMER':
+            from django.utils import timezone
+            now = timezone.now()
+            return Offer.objects.filter(is_active=True, start_date__lte=now, end_date__gte=now).select_related('created_by')
+        return self.queryset
+
     def get_serializer_class(self):
         if self.action == 'create':
             return OfferCreateSerializer

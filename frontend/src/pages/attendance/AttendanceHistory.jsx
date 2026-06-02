@@ -102,7 +102,7 @@ export default function AttendanceHistory() {
         <div className="bg-card rounded-xl border shadow-sm">
           <DataTable 
             columns={columns} 
-            data={history?.data || []}
+            data={Array.isArray(history?.data) ? history?.data : (history?.data?.results || [])}
             emptyMessage="No attendance records found"
             emptyDescription="Try adjusting your filters to see more results."
           />

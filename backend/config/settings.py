@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'apps.offers',
     'apps.rewards',
     'apps.settings_app',
-    'apps.notifications'
+    'apps.notifications',
+    'apps.staff'
 ]
 
 MIDDLEWARE = [

@@ -25,6 +25,12 @@ import CustomerCreate from "@/pages/customers/CustomerCreate";
 import CustomerEdit from "@/pages/customers/CustomerEdit";
 import CustomerDetail from "@/pages/customers/CustomerDetail";
 
+// Staff Pages
+import StaffList from "@/pages/staff/StaffList";
+import StaffCreate from "@/pages/staff/StaffCreate";
+import StaffEdit from "@/pages/staff/StaffEdit";
+import StaffDetail from "@/pages/staff/StaffDetail";
+
 // Reward Pages
 import RewardDashboard from "@/pages/rewards/RewardDashboard";
 import RewardHistory from "@/pages/rewards/RewardHistory";
@@ -78,6 +84,11 @@ export default function AppRouter() {
             <Route path="/attendance/reports" element={<AttendanceReport />} />
             <Route path="/attendance/staff" element={<StaffAttendance />} />
             
+            <Route path="/staff" element={<StaffList />} />
+            <Route path="/staff/create" element={<StaffCreate />} />
+            <Route path="/staff/:id" element={<StaffDetail />} />
+            <Route path="/staff/:id/edit" element={<StaffEdit />} />
+
             <Route path="/offers/create" element={<OfferCreate />} />
             <Route path="/offers/:id/edit" element={<OfferEdit />} />
             

@@ -11,6 +11,7 @@ class Offer(BaseModel):
     slug = models.SlugField(max_length=255, unique=True, blank=True)
     description = models.TextField()
     banner = models.ImageField(upload_to='offers/banners/', validators=[validate_image_size])
+    discount_percentage = models.PositiveIntegerField(default=0, help_text="Discount percentage")
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
     priority = models.IntegerField(default=0, help_text="Higher priority offers show first")

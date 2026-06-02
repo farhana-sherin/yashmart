@@ -10,7 +10,7 @@ class OfferSerializer(serializers.ModelSerializer):
         model = Offer
         fields = [
             'id', 'title', 'slug', 'description', 'banner', 'banner_url',
-            'start_date', 'end_date', 'priority', 'is_active', 
+            'discount_percentage', 'start_date', 'end_date', 'priority', 'is_active', 
             'is_valid_offer', 'is_expired', 'created_at', 'updated_at'
         ]
         read_only_fields = ['slug', 'created_at', 'updated_at']
@@ -26,7 +26,7 @@ class OfferSerializer(serializers.ModelSerializer):
 class OfferCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer
-        fields = ['title', 'description', 'banner', 'start_date', 'end_date', 'priority', 'is_active']
+        fields = ['title', 'description', 'banner', 'discount_percentage', 'start_date', 'end_date', 'priority', 'is_active']
 
     def validate(self, attrs):
         if attrs.get('start_date') and attrs.get('end_date'):
@@ -37,7 +37,7 @@ class OfferCreateSerializer(serializers.ModelSerializer):
 class OfferUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Offer
-        fields = ['title', 'description', 'banner', 'start_date', 'end_date', 'priority', 'is_active']
+        fields = ['title', 'description', 'banner', 'discount_percentage', 'start_date', 'end_date', 'priority', 'is_active']
 
     def validate(self, attrs):
         start_date = attrs.get('start_date', self.instance.start_date if self.instance else None)

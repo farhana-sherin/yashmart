@@ -85,11 +85,10 @@ class LoginSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.ModelSerializer):
+    customer_profile = serializers.SerializerMethodField()
 
     class Meta:
-
         model = User
-
         fields = [
             'id',
             'name',
@@ -101,7 +100,22 @@ class ProfileSerializer(serializers.ModelSerializer):
             'profile_image',
             'is_profile_completed',
             'is_verified',
+            'customer_profile',
         ]
+
+    def get_customer_profile(self, obj):
+        if obj.role == 'CUSTOMER' and hasattr(obj, 'customer_profile'):
+            try:
+                profile = obj.customer_profile
+                return {
+                    "loyalty_id": profile.loyalty_id,
+                    "total_points": profile.total_points,
+                    "pending_balance": float(profile.pending_balance),
+                    "address": profile.address,
+                }
+            except Exception:
+                return None
+        return None
 
 
 class CompleteProfileSerializer(serializers.ModelSerializer):

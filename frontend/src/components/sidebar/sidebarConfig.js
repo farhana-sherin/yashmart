@@ -4,7 +4,8 @@ import {
   Users, 
   Gift, 
   Tag, 
-  Settings 
+  Settings,
+  Briefcase
 } from "lucide-react";
 
 export const getSidebarConfig = (role) => {
@@ -28,6 +29,12 @@ export const getSidebarConfig = (role) => {
       roles: ["ADMIN"],
     },
     {
+      title: "Staff",
+      path: "/staff",
+      icon: Briefcase,
+      roles: ["ADMIN"],
+    },
+    {
       title: "Rewards",
       path: "/rewards",
       icon: Gift,
@@ -37,7 +44,13 @@ export const getSidebarConfig = (role) => {
       title: "Offers",
       path: "/offers",
       icon: Tag,
-      roles: ["ADMIN"],
+      roles: ["ADMIN", "STAFF"],
+    },
+    {
+      title: "Browse Offers",
+      path: "/browse-offers",
+      icon: Tag,
+      roles: ["CUSTOMER"],
     },
     {
       title: "Settings",

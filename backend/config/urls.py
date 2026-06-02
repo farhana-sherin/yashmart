@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/v1/dashboard/', include('apps.dashboard.urls')),
     path('api/v1/notifications/', include('apps.notifications.urls')),
     path('api/v1/settings/', include('apps.settings_app.urls')),    
+    path('api/v1/staff/', include('apps.staff.urls')),
     # Documentation
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),

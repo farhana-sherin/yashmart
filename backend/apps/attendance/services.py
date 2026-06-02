@@ -106,27 +106,78 @@ class AttendanceService:
 
     @staticmethod
     def get_attendance_statistics(user=None, user_id=None):
-        query = Q()
-        if user:
-            query &= Q(staff=user)
-        elif user_id:
-            query &= Q(staff_id=user_id)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
         
-        stats = Attendance.objects.filter(query).aggregate(
-            total_days=Count('id'),
-            late_count=Count('id', filter=Q(status='LATE')),
-            avg_working_hours=Avg('working_hours')
-        )
+        is_admin_query = False
+        target_user = None
         
-        # Today's stats
-        today_present = Attendance.objects.filter(date=timezone.now().date()).count()
-        
-        return {
-            "total_present": stats['total_days'] or 0,
-            "total_late": stats['late_count'] or 0,
-            "avg_working_hours": round(stats['avg_working_hours'] or 0, 2),
-            "today_present_count": today_present
-        }
+        if user_id:
+            try:
+                target_user = User.objects.get(id=user_id)
+            except Exception:
+                pass
+        elif user:
+            if user.role == 'ADMIN' or user.is_superuser:
+                is_admin_query = True
+            else:
+                target_user = user
+        else:
+            is_admin_query = True
+                
+        if is_admin_query:
+            # Admin statistics (for all staff)
+            today = timezone.localtime(timezone.now()).date()
+            total_staff = User.objects.filter(role='STAFF', is_active=True).count()
+            
+            present_count = Attendance.objects.filter(date=today, staff__role='STAFF').exclude(status='ABSENT').count()
+            late_count = Attendance.objects.filter(date=today, staff__role='STAFF', status='LATE').count()
+            absent_count = Attendance.objects.filter(date=today, staff__role='STAFF', status='ABSENT').count()
+            
+            # If absent records are not created automatically, any staff who hasn't checked in today is absent
+            actual_checked_in = Attendance.objects.filter(date=today, staff__role='STAFF').values_list('staff_id', flat=True)
+            unmarked_staff = User.objects.filter(role='STAFF', is_active=True).exclude(id__in=actual_checked_in).count()
+            absent_count += unmarked_staff
+            
+            attendance_rate = round((present_count / total_staff) * 100, 1) if total_staff > 0 else 100.0
+            
+            return {
+                "present_count": present_count,
+                "absent_count": absent_count,
+                "late_count": late_count,
+                "attendance_rate": min(attendance_rate, 100.0)
+            }
+        else:
+            # Personal statistics for the staff member
+            query = Q()
+            if target_user:
+                query &= Q(staff=target_user)
+            else:
+                return {
+                    "present_count": 0,
+                    "absent_count": 0,
+                    "late_count": 0,
+                    "attendance_rate": 100.0
+                }
+            
+            # Count records
+            total_records = Attendance.objects.filter(query).count()
+            present_count = Attendance.objects.filter(query).exclude(status='ABSENT').count()
+            late_count = Attendance.objects.filter(query, status='LATE').count()
+            absent_count = Attendance.objects.filter(query, status='ABSENT').count()
+            
+            # Simple attendance rate: present days vs total days logged
+            if total_records > 0:
+                attendance_rate = round((present_count / total_records) * 100, 1)
+            else:
+                attendance_rate = 100.0
+                
+            return {
+                "present_count": present_count,
+                "absent_count": absent_count,
+                "late_count": late_count,
+                "attendance_rate": attendance_rate
+            }
 
     @staticmethod
     def get_monthly_report(month, year, staff_id=None):

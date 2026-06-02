@@ -10,12 +10,16 @@ import Badge from "@/components/ui/Badge";
 import PageLoader from "@/components/loaders/PageLoader";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import EmptyState from "@/components/common/EmptyState";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function OfferList() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteId, setDeleteId] = useState(null);
+  
+  const { user } = useAuthStore();
+  const isManager = user?.role === "ADMIN" || user?.role === "STAFF";
 
   const { data: offers, isLoading } = useQuery({
     queryKey: ["offers", searchTerm],
@@ -41,9 +45,11 @@ export default function OfferList() {
           <h1 className="text-3xl font-bold tracking-tight">Promotions & Offers</h1>
           <p className="text-muted-foreground mt-1">Manage store-wide discounts and promotional banners.</p>
         </div>
-        <Button onClick={() => navigate("/offers/create")} className="gap-2">
-          <Plus size={18} /> New Offer
-        </Button>
+        {isManager && (
+          <Button onClick={() => navigate("/offers/create")} className="gap-2">
+            <Plus size={18} /> New Offer
+          </Button>
+        )}
       </div>
 
       <div className="bg-card p-6 rounded-xl border shadow-sm space-y-6">
@@ -57,9 +63,9 @@ export default function OfferList() {
           />
         </div>
 
-        {offers?.data?.length > 0 ? (
+        {offers?.data?.results?.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {offers.data.map((offer) => (
+            {offers.data.results.map((offer) => (
               <div key={offer.id} className="group bg-muted/20 border rounded-xl overflow-hidden hover:border-primary transition-all flex flex-col">
                 <div className="aspect-video relative overflow-hidden bg-muted">
                   {offer.banner ? (
@@ -79,7 +85,11 @@ export default function OfferList() {
                 <div className="p-5 flex-1 flex flex-col space-y-3">
                   <div className="flex justify-between items-start">
                     <h3 className="font-bold text-lg line-clamp-1">{offer.title}</h3>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary">-{offer.discount_percentage}%</Badge>
+                    {offer.discount_percentage ? (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary">-{offer.discount_percentage}%</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="bg-primary/10 text-primary">Promo</Badge>
+                    )}
                   </div>
                   
                   <p className="text-sm text-muted-foreground line-clamp-2">{offer.description}</p>
@@ -90,14 +100,16 @@ export default function OfferList() {
                       <span>{new Date(offer.start_date).toLocaleDateString()} - {new Date(offer.end_date).toLocaleDateString()}</span>
                     </div>
                     
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/offers/${offer.id}/edit`)}>
-                        <Edit size={14} />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteId(offer.id)}>
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
+                    {isManager && (
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/offers/${offer.id}/edit`)}>
+                          <Edit size={14} />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => setDeleteId(offer.id)}>
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

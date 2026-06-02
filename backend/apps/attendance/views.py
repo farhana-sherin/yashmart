@@ -101,13 +101,32 @@ class CheckOutView(views.APIView, StandardResponseMixin):
 
 class AttendanceHistoryView(generics.ListAPIView, StandardResponseMixin):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = AttendanceHistorySerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    pagination_class = None
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
     filterset_fields = ['date', 'status']
+    search_fields = ['staff__first_name', 'staff__last_name', 'staff__email']
     ordering_fields = ['date', 'check_in']
 
+    def get_serializer_class(self):
+        if self.request.user.role == 'ADMIN' or self.request.user.is_superuser:
+            return AttendanceSerializer
+        return AttendanceHistorySerializer
+
     def get_queryset(self):
-        return Attendance.objects.filter(staff=self.request.user)
+        if self.request.user.role == 'ADMIN' or self.request.user.is_superuser:
+            queryset = Attendance.objects.all().select_related('staff')
+        else:
+            queryset = Attendance.objects.filter(staff=self.request.user)
+
+        # Handle date range filtering
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            queryset = queryset.filter(date__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(date__lte=date_to)
+
+        return queryset
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())

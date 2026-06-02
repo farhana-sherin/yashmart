@@ -36,3 +36,13 @@ export const customerSchema = z.object({
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   address: z.string().optional(),
 });
+
+export const staffSchema = z.object({
+  full_name: z.string().min(1, "Full name is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  department: z.string().optional(),
+  designation: z.string().optional(),
+  joining_date: z.string().optional(),
+  notes: z.string().optional(),
+});
